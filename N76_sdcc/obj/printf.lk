@@ -1,0 +1,24 @@
+-muwx
+-i obj/printf.ihx
+-M
+-Y
+-I 0x0100
+-X 0x0300
+-C 0x4800
+-b HOME = 0x0000
+-b XSEG = 0x0001
+-b PSEG = 0x0001
+-b ISEG = 0x0000
+-b BSEG = 0x0000
+-k /usr/local/bin/../share/sdcc/lib/small
+-k /usr/local/share/sdcc/lib/small
+-l mcs51
+-l libsdcc
+-l libint
+-l liblong
+-l libfloat
+obj/main.c.rel
+obj/Common.c.rel
+obj/Delay.c.rel
+
+-e
