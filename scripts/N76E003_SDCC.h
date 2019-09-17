@@ -158,131 +158,131 @@ __sfr __at (0xFF) EIPH1;
 
 /*  BIT Registers  */
 /*  SCON_1  */
-__sbit __at 0xF8^7 SM0_1;
-__sbit __at 0xF8^7 FE_1; 
-__sbit __at 0xF8^6 SM1_1; 
-__sbit __at 0xF8^5 SM2_1; 
-__sbit __at 0xF8^4 REN_1; 
-__sbit __at 0xF8^3 TB8_1; 
-__sbit __at 0xF8^2 RB8_1; 
-__sbit __at 0xF8^1 TI_1; 
-__sbit __at 0xF8^0 RI_1; 
+__sbit __at (0xFF) SM0_1;
+__sbit __at (0xFF) FE_1; 
+__sbit __at (0xFE) SM1_1; 
+__sbit __at (0xFD) SM2_1; 
+__sbit __at (0xFC) REN_1; 
+__sbit __at (0xFB) TB8_1; 
+__sbit __at (0xFA) RB8_1; 
+__sbit __at (0xF9) TI_1; 
+__sbit __at (0xF8) RI_1; 
 
 /*  ADCCON0  */
-__sbit __at 0xE8^7 ADCF;
-__sbit __at 0xE8^6 ADCS;
-__sbit __at 0xE8^5 ETGSEL1;
-__sbit __at 0xE8^4 ETGSEL0;
-__sbit __at 0xE8^3 ADCHS3;
-__sbit __at 0xE8^2 ADCHS2;
-__sbit __at 0xE8^1 ADCHS1;
-__sbit __at 0xE8^0 ADCHS0;
+__sbit __at (0xEF) ADCF;
+__sbit __at (0xEE) ADCS;
+__sbit __at (0xED) ETGSEL1;
+__sbit __at (0xEC) ETGSEL0;
+__sbit __at (0xEB) ADCHS3;
+__sbit __at (0xEA) ADCHS2;
+__sbit __at (0xE9) ADCHS1;
+__sbit __at (0xE8) ADCHS0;
 
 /*  PWMCON0  */
-__sbit __at 0xD8^7 PWMRUN;
-__sbit __at 0xD8^6 LOAD;
-__sbit __at 0xD8^5 PWMF;
-__sbit __at 0xD8^4 CLRPWM;
+__sbit __at (0xDF) PWMRUN;
+__sbit __at (0xDE) LOAD;
+__sbit __at (0xDD) PWMF;
+__sbit __at (0xDC) CLRPWM;
 
 
 /*  PSW */
-__sbit __at 0xD0^7 CY;
-__sbit __at 0xD0^6 AC;
-__sbit __at 0xD0^5 F0;
-__sbit __at 0xD0^4 RS1;
-__sbit __at 0xD0^3 RS0;
-__sbit __at 0xD0^2 OV;
-__sbit __at 0xD0^0 P;
+__sbit __at (0xD7) CY;
+__sbit __at (0xD6) AC;
+__sbit __at (0xD5) F0;
+__sbit __at (0xD4) RS1;
+__sbit __at (0xD3) RS0;
+__sbit __at (0xD2) OV;
+__sbit __at (0xD0) P;
 
 /*  T2CON  */
-__sbit __at 0xC8^7 TF2;
-__sbit __at 0xC8^2 TR2;
-__sbit __at 0xC8^0 CM_RL2;
+__sbit __at (0xCF) TF2;
+__sbit __at (0xCA) TR2;
+__sbit __at (0xC8) CM_RL2;
  
 /*  I2CON  */
-__sbit __at 0xC0^6 I2CEN;
-__sbit __at 0xC0^5 STA;
-__sbit __at 0xC0^4 STO;
-__sbit __at 0xC0^3 SI;
-__sbit __at 0xC0^2 AA;
-__sbit __at 0xC0^0 I2CPX;
+__sbit __at (0xC6) I2CEN;
+__sbit __at (0xC5) STA;
+__sbit __at (0xC4) STO;
+__sbit __at (0xC3) SI;
+__sbit __at (0xC2) AA;
+__sbit __at (0xC0) I2CPX;
 
 /*  IP  */  
-__sbit __at 0xB8^6 PADC;
-__sbit __at 0xB8^5 PBOD;
-__sbit __at 0xB8^4 PS;
-__sbit __at 0xB8^3 PT1;
-__sbit __at 0xB8^2 PX1;
-__sbit __at 0xB8^1 PT0;
-__sbit __at 0xB8^0 PX0;
+__sbit __at (0xBE) PADC;
+__sbit __at (0xBD) PBOD;
+__sbit __at (0xBC) PS;
+__sbit __at (0xBB) PT1;
+__sbit __at (0xBA) PX1;
+__sbit __at (0xB9) PT0;
+__sbit __at (0xB8) PX0;
 
 /*  P3  */  
-__sbit __at 0xB0^0 P30;
+__sbit __at (0xB0) P30;
 
 
 /*  IE  */
-__sbit __at 0xA8^7 EA;
-__sbit __at 0xA8^6 EADC;
-__sbit __at 0xA8^5 EBOD;
-__sbit __at 0xA8^4 ES;
-__sbit __at 0xA8^3 ET1;
-__sbit __at 0xA8^2 EX1;
-__sbit __at 0xA8^1 ET0;
-__sbit __at 0xA8^0 EX0;
+__sbit __at (0xAF) EA;
+__sbit __at (0xAE) EADC;
+__sbit __at (0xAD) EBOD;
+__sbit __at (0xAC) ES;
+__sbit __at (0xAB) ET1;
+__sbit __at (0xAA) EX1;
+__sbit __at (0xA9) ET0;
+__sbit __at (0xA8) EX0;
 
 /*  P2  */ 
-__sbit __at 0xA0^0 P20;
+__sbit __at (0xA0) P20;
 
 /*  SCON  */
-__sbit __at 0x98^7 SM0;
-__sbit __at 0x98^7 FE; 
-__sbit __at 0x98^6 SM1; 
-__sbit __at 0x98^5 SM2; 
-__sbit __at 0x98^4 REN; 
-__sbit __at 0x98^3 TB8; 
-__sbit __at 0x98^2 RB8; 
-__sbit __at 0x98^1 TI; 
-__sbit __at 0x98^0 RI; 
+__sbit __at (0x9F) SM0;
+__sbit __at (0x9F) FE; 
+__sbit __at (0x9E) SM1; 
+__sbit __at (0x9D) SM2; 
+__sbit __at (0x9C) REN; 
+__sbit __at (0x9B) TB8; 
+__sbit __at (0x9A) RB8; 
+__sbit __at (0x99) TI; 
+__sbit __at (0x98) RI; 
 
 /*  P1  */     
-__sbit __at 0x90^7 P17;
-__sbit __at 0x90^6 P16;
-__sbit __at 0x90^6 TXD_1; 
-__sbit __at 0x90^5 P15;
-__sbit __at 0x90^4 P14;
-__sbit __at 0x90^4 SDA;    
-__sbit __at 0x90^3 P13;
-__sbit __at 0x90^3 SCL;  
-__sbit __at 0x90^2 P12; 
-__sbit __at 0x90^1 P11;
-__sbit __at 0x90^0 P10;
+__sbit __at (0x97) P17;
+__sbit __at (0x96) P16;
+__sbit __at (0x96) TXD_1; 
+__sbit __at (0x95) P15;
+__sbit __at (0x94) P14;
+__sbit __at (0x94) SDA;    
+__sbit __at (0x93) P13;
+__sbit __at (0x93) SCL;  
+__sbit __at (0x92) P12; 
+__sbit __at (0x91) P11;
+__sbit __at (0x90) P10;
 
 /*  TCON  */
-__sbit __at 0x88^7 TF1;
-__sbit __at 0x88^6 TR1;
-__sbit __at 0x88^5 TF0;
-__sbit __at 0x88^4 TR0;
-__sbit __at 0x88^3 IE1;
-__sbit __at 0x88^2 IT1;
-__sbit __at 0x88^1 IE0;
-__sbit __at 0x88^0 IT0;
+__sbit __at (0x8F) TF1;
+__sbit __at (0x8E) TR1;
+__sbit __at (0x8D) TF0;
+__sbit __at (0x8C) TR0;
+__sbit __at (0x8B) IE1;
+__sbit __at (0x8A) IT1;
+__sbit __at (0x89) IE0;
+__sbit __at (0x88) IT0;
 
 /*  P0  */  
 
-__sbit __at 0x80^7 P07;
-__sbit __at 0x80^7 RXD;
-__sbit __at 0x80^6 P06;
-__sbit __at 0x80^6 TXD;
-__sbit __at 0x80^5 P05;
-__sbit __at 0x80^4 P04;
-__sbit __at 0x80^4 STADC;
-__sbit __at 0x80^3 P03;
-__sbit __at 0x80^2 P02;
-__sbit __at 0x80^2 RXD_1;
-__sbit __at 0x80^1 P01;
-__sbit __at 0x80^1 MISO;
-__sbit __at 0x80^0 P00;
-__sbit __at 0x80^0 MOSI;
+__sbit __at (0x87) P07;
+__sbit __at (0x87) RXD;
+__sbit __at (0x86) P06;
+__sbit __at (0x86) TXD;
+__sbit __at (0x85) P05;
+__sbit __at (0x84) P04;
+__sbit __at (0x84) STADC;
+__sbit __at (0x83) P03;
+__sbit __at (0x82) P02;
+__sbit __at (0x82) RXD_1;
+__sbit __at (0x81) P01;
+__sbit __at (0x81) MISO;
+__sbit __at (0x80) P00;
+__sbit __at (0x80) MOSI;
 
 
 

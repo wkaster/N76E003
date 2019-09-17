@@ -17,7 +17,7 @@ if(isset($argc) && $argc >= 3) {
         $patterns[1] = $sbit_pattern;
         $replacements = [];
         $replacements[0] = '__sfr __at ($6) $3$7';
-        $replacements[1] = '__sbit __at $6^$7 $3$8';
+        $replacements[1] = '__sbit __at ($6) $3$8';
         while (($line = fgets($inHnd, 1024)) !== false) {
             $new_line = preg_replace($patterns, $replacements, $line);
             if(preg_match($sfr_pattern, $line)) {
@@ -25,7 +25,9 @@ if(isset($argc) && $argc >= 3) {
             }
             if(preg_match($sbit_pattern, $line)) {
                 $idx = preg_replace($sbit_pattern, '$6', $line);
-                $new_line = str_replace("$idx^", "$sfrs[$idx]^", $new_line);
+		$bit = preg_replace($sbit_pattern, '$7', $line);
+                eval('$address = sprintf("0x%X",'.$sfrs[$idx].'^'.$bit.');');
+                $new_line = str_replace("($idx)", "($address)", $new_line);
             }
             fwrite($outHnd, $new_line);
         }
