@@ -13,19 +13,21 @@ place after the TA protection unlock is called.
 Example:  
 
 Keil C51 code:  
-\-------------  
+\--------------  
+```asm
 mov	TA, #0xAA				; TA = 0xAA  
 mov	TA, #0x55				; TA = 0x55 {'U'}  
-orl	SFRS, #0x01				; SFRS |= 0x01  
-
+orl	SFRS, #0x01		  	; SFRS |= 0x01  
+```
 SDCC non corrected code:  
 \--------------------------  
-mov	TA, #0xAA				; TA = 0xAA  
-mov	TA, #0x55				; TA = 0x55 {'U'}  
+```asm
+mov	TA, #0xAA			   ; TA = 0xAA  
+mov	TA, #0x55			   ; TA = 0x55 {'U'}  
 mov	R6, SFRS				; R6 = SFRS  
-orl	0x06, #0x01				; 0x06 |= 0x01  
+orl	0x06, #0x01			 ; 0x06 |= 0x01  
 mov	SFRS, R6				; SFRS = R6  
-
+```
 
 Solution 1  
 ----------
@@ -54,7 +56,7 @@ Nuvoton (strongly) recommends disable POR at startup.  See section 24.1 of
 the datasheet for more information.  That could be done using the  
 "_sdcc_external_startup" function as shown below.  
 
-``````c
+```c
 unsigned char _sdcc_external_startup (void)  
 {  
     __asm  
@@ -67,3 +69,5 @@ unsigned char _sdcc_external_startup (void)
     __endasm;  
     return 0;  
 }  
+
+```  
