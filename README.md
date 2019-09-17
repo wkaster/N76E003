@@ -43,7 +43,9 @@ replace {
 
 Solution 2 (Thanks to Vladimir Shevtsov / MrFeek)  
 ----------
-Make a modified SFR_Macro.h  
+Make a modified SFR_Macro.h replacing all "|=" statments  
+
+Example:  
 
 Replace this:&nbsp; #define&nbsp; set_SMOD&nbsp;&nbsp;&nbsp;&nbsp;PCON    |= SET_BIT7;   // Original  
 By this:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#define&nbsp; set_SMOD   &nbsp;&nbsp;\__asm__ ("orl _PCON,#0x80");&nbsp;  // SDCC compatible  
