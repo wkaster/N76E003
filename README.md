@@ -31,12 +31,12 @@ Solution 1
 ----------
 Use a peep.def file containing:  
 
-replace {
-    mov    %1,%2  
-    orl    a%1,%3  
-    mov    %2,%1  
+replace {  
+&nbsp;&nbsp;mov&nbsp;    %1,%2  
+&nbsp;&nbsp;orl&nbsp;    a%1,%3  
+&nbsp;&nbsp;mov&nbsp;    %2,%1  
 } by {  
-    orl    %2,%3  
+&nbsp;&nbsp;orl&nbsp;    %2,%3  
 }  
 
 Solution 2 (Thanks to Vladimir Shevtsov / MrFeek)  
