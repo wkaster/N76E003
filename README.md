@@ -6,6 +6,8 @@ using SDCC.
 Problem with bitwise OR and SFRs  (Thanks to Skcks)
 --------------------------------
 
+**NOTE:** This issue only occurs on **sdcc versions 3.8 and below**.
+
 When sdcc compiles the instruction "=|" (bitwise inclusive OR and assignment)  
 it uses 3 instructions, and for some protected SFR's only 4 cycles could take  
 place after the TA protection unlock is called.  
