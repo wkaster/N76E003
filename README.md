@@ -1,6 +1,6 @@
 # N76E003
 
-This project aim to support the Nuvoton N76E003 microcontroller in Linux  
+This project aim to support the Nuvoton N76E003 microcontroller in Linux/Windows (Cygwin)  
 using SDCC.  
 
 Problem with bitwise OR and SFRs  (Thanks to Skcks)
