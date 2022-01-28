@@ -1,3 +1,6 @@
+/*
+UNDER DEVELOPMENT - not yet funcional
+*/
 #include "N76E003.h"
 #include "SFR_Macro.h"
 #include "Function_define.h"
