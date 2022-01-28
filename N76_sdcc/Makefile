@@ -7,12 +7,12 @@
 INCDIR  = ./inc
 SRCDIR  = ./src
 OBJDIR  = ./obj
-HEXDIR  = ./hex
+OUTDIR  = ./hex
 LIBDIR  = ./lib
 
 # ------------------------------------------------------
 # Target and Source
-TARGET = $(HEXDIR)/printf
+TARGET = $(OUTDIR)/main
 
 #C_SRC = $(SRCDIR)/helloworld.c
 C_SRC := $(wildcard $(SRCDIR)/*.c $(LIBDIR)/*.c)
@@ -35,6 +35,7 @@ OBJ = $(addprefix $(OBJDIR)/, $(C_OBJ_FILE)) $(addprefix $(OBJDIR)/, $(ASM_OBJ_F
 
 # Memory Model (small, medium, large, huge)
 MODEL  = small
+
 # ------------------------------------------------------
 # Memory Layout
 # PRG Size = 4K Bytes
@@ -49,7 +50,9 @@ XRAM_SIZE = --xram-size 768
 
 # See Datasheet section 13.5 for 16.6MHz HIRC mode
 # N76 Clock Frequency (-DFOSC_160000, -DFOSC_166000)
-DFOSC = -DFOSC_160000
+# USE_FLOATS (this should be combined with model large if set 1)
+# -DUSE_FLOATS=1
+DEFS = -DFOSC_160000
 
 # ------------------------------------------------------
 # SDCC
@@ -64,18 +67,21 @@ MCU_MODEL = mcs51
 
 #DEBUG = --debug
 AFLAGS =  -l -s 
-CFLAGS = -I$(INCDIR) -m$(MCU_MODEL) --model-$(MODEL) --out-fmt-ihx --no-xinit-opt $(DEBUG) $(DFOSC) --peep-file tools/peep.def
-LFLAGS = $(LIBPATH) $(LIBS) -m$(MCU_MODEL) --model-$(MODEL) $(CODE_SIZE) $(IRAM_SIZE) $(XRAM_SIZE) --out-fmt-ihx $(DEBUG) $(DFOSC)
+CFLAGS = -I$(INCDIR) -m$(MCU_MODEL) --model-$(MODEL) --out-fmt-ihx --no-xinit-opt $(DEBUG) $(DEFS) --peep-file tools/peep.def
+LFLAGS = $(LIBPATH) $(LIBS) -m$(MCU_MODEL) --model-$(MODEL) $(CODE_SIZE) $(IRAM_SIZE) $(XRAM_SIZE) --out-fmt-ihx $(DEBUG) $(DEFS)
 
 # ------------------------------------------------------
 # S = @
 
-.PHONY: all clean
+.PHONY: all
 
-all: $(TARGET).hex
+all: $(TARGET).bin $(TARGET).hex
 
-$(HEXDIR)/%.hex: $(OBJDIR)/%.ihx
+$(OUTDIR)/%.hex: $(OBJDIR)/%.ihx
 	$(S) packihx $^ > $@
+
+$(OUTDIR)/%.bin: $(OBJDIR)/%.ihx
+	$(S) makebin -p $^ $@
 
 $(OBJDIR)/%.ihx: $(OBJ)
 	$(S) $(CC) -o $@ $(LFLAGS) $^
@@ -89,9 +95,12 @@ $(OBJDIR)/%.c.rel: $(SRCDIR)/%.c
 $(OBJDIR)/%.asm.rel: $(SRCDIR)/%.asm
 	$(S) $(AS) $(AFLAGS) -o $@ $^ 
 
+.PHONY: clean
+
 clean:
 	$(S) rm -rf $(OBJDIR)/*
 	$(S) rm -rf $(TARGET).hex
+	$(S) rm -rf $(TARGET).bin
 	$(S) rm -rf $(TARGET).a51
 
 disasm: $(TARGET).hex
