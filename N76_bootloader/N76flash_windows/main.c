@@ -1,3 +1,20 @@
+/**
+*  N76flash utility by Wiliam Kaster
+*  Visit https://github.com/wkaster/N76E003 for more info
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, version 3.
+*
+* This program is distributed in the hope that it will be useful, but
+* WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+* General Public License for more details.
+*
+*
+*  Version 1.0: 2022-02-04
+*       First working version
+*/
 #include<windows.h>
 #include<stdio.h>
 #include<stdbool.h>
@@ -43,7 +60,7 @@ int main(int argc, char** argv)
     COMMTIMEOUTS TimeOuts;
     //OVERLAPPED writeOverlapped;
     unsigned char byWriteBuffer[128];
-    unsigned char byReadBuffer;
+    unsigned char byReadBuffer;             // just 1 byte needed (usually ack)
     unsigned char byFileBuffer[BLOCK_SIZE];
     unsigned char byCRC;
     int nBytesRead = 0;
@@ -195,8 +212,8 @@ int main(int argc, char** argv)
     dcb.DCBlength = sizeof(DCB);
 
 
-    //  9,600 bps, 8 data bits, no parity, and 1 stop bit.
-    dcb.BaudRate = CBR_9600;     //  baud rate
+    //  19200 bps, 8 data bits, no parity, and 1 stop bit.
+    dcb.BaudRate = CBR_19200;     //  baud rate
     dcb.ByteSize = 8;             //  data size, xmit and rcv
     dcb.Parity   = NOPARITY;      //  parity bit
     dcb.StopBits = ONESTOPBIT;    //  stop bit
@@ -230,7 +247,7 @@ int main(int argc, char** argv)
     byWriteBuffer[0] = 0x01;    // [SOH] Start of Heading: Are you there?
     byReadBuffer = 0x00;     // zero receive buffer byte
 
-    printf("Connecting, please reset the microcontroller...\n");
+    printf("Connecting, please RESET the microcontroller...\n");
 
     for(i=0;i<=nTries;i++) {
         bSuccess = WriteFile(hCom,
@@ -266,6 +283,11 @@ int main(int argc, char** argv)
         }
         else {
             printf("Try %d...", i);
+            if(byReadBuffer!=0x00) {
+                byReadBuffer=0x00;              // returning garbage or application data
+                Sleep(200);                     // forcing wait
+                PurgeComm(hCom,PURGE_RXCLEAR);  // clearing for next try
+            }
             if(i==nTries) {
                 printf ("Give up!\n");
                 nReturnCode=1;
@@ -275,6 +297,24 @@ int main(int argc, char** argv)
     }
 
     if(nReturnCode==1) goto error;  // gave up connecting
+
+
+    TimeOuts.ReadIntervalTimeout = MAXDWORD;
+    TimeOuts.ReadTotalTimeoutMultiplier = 1;
+    TimeOuts.ReadTotalTimeoutConstant = 6000;
+    TimeOuts.WriteTotalTimeoutMultiplier = MAXDWORD;
+    TimeOuts.WriteTotalTimeoutConstant = MAXDWORD;
+
+    bSuccess = SetCommTimeouts(hCom, &TimeOuts);
+
+    if(!bSuccess)
+    {
+        //  Handle the error.
+        printf("SetCommTimeouts failed with error %ld.\n", GetLastError());
+        nReturnCode = 1;
+        goto error;
+    }
+
 
     printf("Erasing... ");
 
@@ -321,9 +361,9 @@ int main(int argc, char** argv)
     while(!feof(pFile)) {
         nBytesRead = fread(&byFileBuffer[0], sizeof(unsigned char), BLOCK_SIZE, pFile);
 
-        // fill with 0x00 if needed
+        // fill with 0xFF if needed
         if(nBytesRead < BLOCK_SIZE) {
-            memset(&byFileBuffer[nBytesRead], (unsigned char) 0x00, BLOCK_SIZE - nBytesRead);
+            memset(&byFileBuffer[nBytesRead], (unsigned char) 0xFF, BLOCK_SIZE - nBytesRead);
             nFileBlocks = i;  // end of file reached: percentage round
         }
 
@@ -440,7 +480,7 @@ unsigned char dallas_crc8(unsigned char* data, unsigned char size)
 }
 
 void help() {
-    printf("Nuvoton N76E003 / MS51xx flash utility V1.0b - Windows version\n");
+    printf("Nuvoton N76E003 / MS51xx flash utility V1.0 - Windows version\n");
     printf("Visit https://github.com/wkaster/N76E003 for more info.\n");
     printf("Options:\n");
     printf(" -file [-f] binary file to flash\n");
