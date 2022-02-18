@@ -7,26 +7,27 @@
 INCDIR  = ./inc
 SRCDIR  = ./src
 OBJDIR  = ./obj
-OUTDIR  = ./hex
+OUTDIR  = ./out
 LIBDIR  = ./lib
 
 # ------------------------------------------------------
 # Target and Source
 TARGET = $(OUTDIR)/main
 
-#C_SRC = $(SRCDIR)/helloworld.c
 C_SRC := $(wildcard $(SRCDIR)/*.c $(LIBDIR)/*.c)
 ASM_SRC = $(wildcard $(SRCDIR)/*.asm)
 
 C_SRC_FILE = $(notdir $(C_SRC))
 C_OBJ_FILE = $(C_SRC_FILE:%.c=%.c.rel)
+C_TO_ASM_FILE = $(C_SRC_FILE:%.c=%.asm)
 
 ASM_SRC_FILE = $(notdir $(ASM_SRC))
 ASM_OBJ_FILE = $(ASM_SRC_FILE:%.asm=%.asm.rel)
 
 OBJ = $(addprefix $(OBJDIR)/, $(C_OBJ_FILE)) $(addprefix $(OBJDIR)/, $(ASM_OBJ_FILE)) 
+CTOASM = $(addprefix $(OUTDIR)/, $(C_TO_ASM_FILE))
 
-#$(info $(OBJ))
+#$(info $(CTOASM))
 
 # ------------------------------------------------------
 # Usually SDCC's small memory model is the best choice.  If
@@ -71,37 +72,44 @@ CFLAGS = -I$(INCDIR) -m$(MCU_MODEL) --model-$(MODEL) --out-fmt-ihx --no-xinit-op
 LFLAGS = $(LIBPATH) $(LIBS) -m$(MCU_MODEL) --model-$(MODEL) $(CODE_SIZE) $(IRAM_SIZE) $(XRAM_SIZE) --out-fmt-ihx $(DEBUG) $(DEFS)
 
 # ------------------------------------------------------
-# S = @
+# Recepies, see GNU MAKE manual
 
 .PHONY: all
 
 all: $(TARGET).bin $(TARGET).hex
 
 $(OUTDIR)/%.hex: $(OBJDIR)/%.ihx
-	$(S) packihx $^ > $@
+	packihx $^ > $@
 
 $(OUTDIR)/%.bin: $(OBJDIR)/%.ihx
-	$(S) makebin -p $^ $@
+	makebin -p $^ $@
 
 $(OBJDIR)/%.ihx: $(OBJ)
-	$(S) $(CC) -o $@ $(LFLAGS) $^
+	$(CC) -o $@ $(LFLAGS) $^
 
 $(OBJDIR)/%.c.rel: $(LIBDIR)/%.c
-	$(S) $(CC) -o $@ $(CFLAGS) -c $^
+	$(CC) -o $@ $(CFLAGS) -c $^
 
 $(OBJDIR)/%.c.rel: $(SRCDIR)/%.c
-	$(S) $(CC) -o $@ $(CFLAGS) -c $^
+	$(CC) -o $@ $(CFLAGS) -c $^
 
 $(OBJDIR)/%.asm.rel: $(SRCDIR)/%.asm
-	$(S) $(AS) $(AFLAGS) -o $@ $^ 
+	$(AS) $(AFLAGS) -o $@ $^ 
 
 .PHONY: clean
 
 clean:
-	$(S) rm -rf $(OBJDIR)/*
-	$(S) rm -rf $(TARGET).hex
-	$(S) rm -rf $(TARGET).bin
-	$(S) rm -rf $(TARGET).a51
+	rm -rf $(OBJDIR)/*
+	rm -rf $(TARGET).hex
+	rm -rf $(TARGET).bin
+	rm -rf $(TARGET).asm
 
-disasm: $(TARGET).hex
-	./tools/mcs51-disasm.pl -M N76E003.h -I ./inc -fl -rj -as $(TARGET).hex > $(TARGET).a51
+
+asm: $(CTOASM)
+
+$(OUTDIR)/%.asm: $(LIBDIR)/%.c
+	$(CC) -o $@ -S $(CFLAGS) -c $^
+
+$(OUTDIR)/%.asm: $(SRCDIR)/%.c
+	$(CC) -o $@ -S $(CFLAGS) -c $^
+
