@@ -80,7 +80,6 @@ inline uint8_t dallas_crc8(const __idata uint8_t* data, uint8_t size)
 void main()
 {
 	uint8_t  crc8 = 0;
-	uint8_t  i;
 	uint16_t u16ApromAddr = 0x0000;
 	bool cmdmode = true;
 
@@ -129,11 +128,17 @@ void main()
 						set_IAPEN; 							//enable IAP mode
 						set_APUEN;							//enable APROM update
 
-						for(u16ApromAddr=0x0000 ; u16ApromAddr < APROM_SIZE ; u16ApromAddr = u16ApromAddr+128)
-						{
-							IAPAL = u16ApromAddr&0xff;
-							IAPAH = (u16ApromAddr>>8)&0xff;
-							IAPFD = 0xFF;						// this mode must be 0xFF
+						uint16_t dst;
+#if APROM_SIZE>32767
+						for(dst=0 ; dst < APROM_SIZE ; dst += 128) {
+#else
+						uint8_t i;
+						dst = 0x0000;
+						for(i = APROM_SIZE/128 ; i ; dst += 128, --i)	{
+#endif
+							IAPAL =  dst&0xff;
+							IAPAH = (dst>>8)&0xff;
+							IAPFD = 0xFF;						// this mode must be 0xFF (TODO: may we move it out of loop?)
 							IAPCN = 0x22;						// APROM page erase - see datasheet IAP modes and command codes
 							set_IAPGO;
 						}
@@ -145,7 +150,7 @@ void main()
 						Send_Data_To_UART0(CMD_ACK);
 						idx = 0;
 					}
-					if(idx >= 2  && receivedBuf[1] != CMD_DEL) {
+					if(idx >= 2  && receivedBuf[1] != CMD_DEL) {	//FIXME: shoould it be just "else" ?
  						Send_Data_To_UART0(CMD_NACK);
 						idx = 0;
 					}
@@ -165,15 +170,18 @@ void main()
 			if(receivedBuf[18] == CMD_ETX) {
 				crc8 = dallas_crc8(&receivedBuf[1], BLOCK_SIZE);
 				if(crc8 == receivedBuf[BLOCK_SIZE + 1]) {
+					uint8_t i;
+					const __idata uint8_t*	src = receivedBuf;
 					//Save data to APROM DATAFLASH
 					clr_EA;								// disable interrupts
 					set_IAPEN;
 					set_APUEN;
-					for(i = 1; i <= BLOCK_SIZE ; i++) {
+					for(i = BLOCK_SIZE; i; --i) {
 						IAPAL = u16ApromAddr&0xff;			// low byte
 						IAPAH = (u16ApromAddr>>8)&0xff;		// high byte
-						IAPFD = receivedBuf[i];				// byte to save
-						IAPCN = 0x21;						// APROM byte program - see datasheet IAP modes and command codes
+//						IAPFD = receivedBuf[i];				// byte to save
+						IAPFD = *++src;						// byte to save
+						IAPCN = 0x21;						// APROM byte program - see datasheet IAP modes and command codes (TODO: may we move it out of loop?)
 						set_IAPGO;							// do it!
 						u16ApromAddr++;						// next APROM byte addr
 					}
