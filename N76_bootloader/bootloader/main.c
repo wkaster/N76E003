@@ -150,7 +150,7 @@ void main()
 						Send_Data_To_UART0(CMD_ACK);
 						idx = 0;
 					}
-					if(idx >= 2  && receivedBuf[1] != CMD_DEL) {	//FIXME: shoould it be just "else" ?
+					if(idx >= 2  && receivedBuf[1] != CMD_DEL) {
  						Send_Data_To_UART0(CMD_NACK);
 						idx = 0;
 					}
