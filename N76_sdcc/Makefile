@@ -14,7 +14,8 @@ LIBDIR  = ./lib
 # Target and Source
 TARGET = $(OUTDIR)/main
 
-C_SRC := $(wildcard $(SRCDIR)/*.c $(LIBDIR)/*.c)
+#C_SRC := $(wildcard $(SRCDIR)/*.c $(LIBDIR)/*.c)
+C_SRC := $(wildcard $(SRCDIR)/*.c)	# bootloader way
 ASM_SRC = $(wildcard $(SRCDIR)/*.asm)
 
 C_SRC_FILE = $(notdir $(C_SRC))

@@ -14,7 +14,7 @@
 #include "Delay.h"
 #include <stdbool.h>
 //#include <stdint.h>
-
+__bit BIT_TMP;
 
 #define APROM_SIZE      16*1024 // 16Kb (APROM) + 2Kb (LDROM) = 18Kb TOTAL  (adjust for MS51x)
 #define BLOCK_SIZE      16		// bytes in data block
@@ -28,10 +28,38 @@
 #define CMD_DEL         0x7F    // [DEL] Delete
 
 
-uint8_t timerCount = 0;
+uint8_t idx;
+uint8_t timerCount;
 uint8_t receivedBuf[20];
-uint8_t idx = 0;
 
+
+inline void uart_init(uint32_t u32Baudrate) //use timer3 as Baudrate generator
+{
+	P06_Quasi_Mode;		//Setting UART pin as Quasi mode for transmit
+	P07_Quasi_Mode;		//Setting UART pin as Quasi mode for transmit
+
+	SCON = 0x50;     //UART0 Mode1,REN=1,TI=1
+	set_SMOD;        //UART0 Double Rate Enable
+	T3CON &= 0xF8;   //T3PS2=0,T3PS1=0,T3PS0=0(Prescale=1)
+	set_BRCK;        //UART0 baud rate clock source = Timer3
+
+#ifdef FOSC_160000
+	RH3    = HIBYTE(65536 - (1000000/u32Baudrate)-1);  		/*16 MHz */
+	RL3    = LOBYTE(65536 - (1000000/u32Baudrate)-1);		/*16 MHz */
+#endif
+#ifdef FOSC_166000
+	RH3    = HIBYTE(65536 - (1037500/u32Baudrate)); 		/*16.6 MHz */
+	RL3    = LOBYTE(65536 - (1037500/u32Baudrate)); 		/*16.6 MHz */
+#endif
+	set_TR3;         //Trigger Timer3
+	set_TI;					 //For printf function must setting TI = 1
+}
+
+static void tx(char c) {
+	while(TI==0);
+	TI = 0;
+	SBUF = c;
+}
 
 void timer0_isr(void) __interrupt 1
 {
@@ -82,9 +110,10 @@ void main()
 	uint8_t  crc8 = 0;
 	uint16_t u16ApromAddr = 0x0000;
 	bool cmdmode = true;
+	idx = 0;
+	timerCount = 0;
 
-	/* maximum speed 19200 without change clock frequency to 16.6MHz. */
-	InitialUART0_Timer3(19200);
+	uart_init(19200);	//	maximum speed 19200 without change clock frequency to 16.6MHz.
 
 	TMOD |= 0x01; // mode 1
 
@@ -104,13 +133,13 @@ void main()
 			switch(receivedBuf[0])
 			{
 				case CMD_SOH:
-					Send_Data_To_UART0(CMD_ACK);
+					tx(CMD_ACK);
 					clr_TR0;						// stop timer
 					idx = 0;
 					cmdmode = true;
 				break;
 				case CMD_EOT:
-					Send_Data_To_UART0(CMD_ACK);
+					tx(CMD_ACK);
 					clr_SWRF;						// clear software reset flag
 					clr_EA;							// disable interrupts
 					TA=0xAA;
@@ -147,11 +176,11 @@ void main()
 						clr_IAPEN;
 						u16ApromAddr = 0x0000;				// reset Aprom Address
 						set_EA;								// enable interrupts
-						Send_Data_To_UART0(CMD_ACK);
+						tx(CMD_ACK);
 						idx = 0;
 					}
 					if(idx >= 2  && receivedBuf[1] != CMD_DEL) {	//FIXME: shoould it be just "else" ?
- 						Send_Data_To_UART0(CMD_NACK);
+ 						tx(CMD_NACK);
 						idx = 0;
 					}
 					break;
@@ -160,7 +189,7 @@ void main()
 					cmdmode = false;
 				break;
 				default:
-					Send_Data_To_UART0(CMD_NACK);
+					tx(CMD_NACK);
 					idx = 0;
 				break;
 			}
@@ -188,10 +217,10 @@ void main()
 					clr_APUEN;
 					clr_IAPEN;
 					set_EA;								// enable interrupts
-					Send_Data_To_UART0(CMD_ACK);
+					tx(CMD_ACK);
 				}
 				else {
-					Send_Data_To_UART0(CMD_NACK);
+					tx(CMD_NACK);
 				}
 				idx = 0;
 				cmdmode = true;
