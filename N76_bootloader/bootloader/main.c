@@ -55,8 +55,12 @@ inline void uart_init(uint32_t u32Baudrate) //use timer3 as Baudrate generator
 	set_TI;					 //For printf function must setting TI = 1
 }
 
+inline void tx_sync(){
+	while(!TI);
+}
+
 static void tx(char c) {
-	while(TI==0);
+	tx_sync();
 	TI = 0;
 	SBUF = c;
 }
@@ -126,8 +130,7 @@ void main()
 
 	set_TR0; 	// run timer
 
-	while(1)
-	{
+	for(;;)	{
 		// commands
 		if(idx > 0 && cmdmode) {
 			switch(receivedBuf[0])
@@ -140,6 +143,7 @@ void main()
 				break;
 				case CMD_EOT:
 					tx(CMD_ACK);
+					tx_sync();
 					clr_SWRF;						// clear software reset flag
 					clr_EA;							// disable interrupts
 					TA=0xAA;
