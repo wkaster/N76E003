@@ -14,7 +14,6 @@
 #include "Delay.h"
 #include <stdbool.h>
 //#include <stdint.h>
-__bit BIT_TMP;
 
 #define APROM_SIZE      16*1024 // 16Kb (APROM) + 2Kb (LDROM) = 18Kb TOTAL  (adjust for MS51x)
 #define BLOCK_SIZE      16		// bytes in data block
@@ -27,11 +26,11 @@ __bit BIT_TMP;
 #define CMD_SUB         0x1A    // [SUB] Substitute
 #define CMD_DEL         0x7F    // [DEL] Delete
 
-
 uint8_t idx;
 uint8_t timerCount;
 uint8_t receivedBuf[20];
 
+uint16_t __at (0xA6) IAPA16 ;
 
 inline void uart_init(uint32_t u32Baudrate) //use timer3 as Baudrate generator
 {
@@ -65,6 +64,25 @@ static void tx(char c) {
 	SBUF = c;
 }
 
+static void ta() {	//timed access protection
+	TA=0xAA;
+	TA=0x55;
+}
+
+static void iap_on() {	//warning:  interrupts have to be disabled
+	ta();	CHPCON|=SET_BIT0;	//set_IAPEN; 		//enable IAP mode
+	ta();	IAPUEN|=SET_BIT0;	//set_APUEN;		//enable APROM update
+}
+
+static void iap_go() {
+	ta();	IAPTRG |= SET_BIT0;	//set_IAPGO;
+}
+
+static void iap_off() {
+	ta();	IAPUEN&=~SET_BIT0;	//	clr_APUEN;
+	ta();	CHPCON&=~SET_BIT0;	//	clr_IAPEN;
+}
+
 void timer0_isr(void) __interrupt 1
 {
 	TL0 = LOBYTE(TIMER_DIV12_VALUE_40ms);
@@ -79,11 +97,10 @@ void timer0_isr(void) __interrupt 1
 
 void serial_isr() __interrupt 4
 {
-	if(RI == 1)
-	{
+	if(RI == 1)	{
 		receivedBuf[idx] = SBUF;
 		idx++;
-		if(idx > 19) {
+		if(idx > sizeof(receivedBuf)-1) {
 			receivedBuf[0] = 0x00;
 			idx = 0;
 		}
@@ -108,11 +125,13 @@ inline uint8_t dallas_crc8(const __idata uint8_t* data, uint8_t size)
 	return crc;
 }
 
+#define u16ApromAddr IAPA16
 
 void main()
 {
 	uint8_t  crc8 = 0;
-	uint16_t u16ApromAddr = 0x0000;
+//	uint16_t u16ApromAddr = 0x0000;
+	u16ApromAddr = 0x0000;
 	bool cmdmode = true;
 	idx = 0;
 	timerCount = 0;
@@ -146,20 +165,18 @@ void main()
 					tx_sync();
 					clr_SWRF;						// clear software reset flag
 					clr_EA;							// disable interrupts
-					TA=0xAA;
-					TA=0x55;
-					CHPCON&=~SET_BIT1;				// boot from APROM
-					TA=0xAA;
-					TA=0x55;
-					CHPCON|=SET_BIT7;				//  reset
+					ta();	CHPCON&=~SET_BIT1;		// clr_BS		boot from APROM
+					ta();	CHPCON|= SET_BIT7;		// set_SWRST	reset
 				break;
+				case CMD_STX:
+					cmdmode = false;
+					break;
 				case CMD_SUB:
 				{
 					if(idx == 2 && receivedBuf[1] == CMD_DEL) {
 						// Erase APROM (128 bytes per page)
 						clr_EA;								// disable interrupts
-						set_IAPEN; 							//enable IAP mode
-						set_APUEN;							//enable APROM update
+						iap_on();
 
 						uint16_t dst;
 #if APROM_SIZE>32767
@@ -169,33 +186,25 @@ void main()
 						dst = 0x0000;
 						for(i = APROM_SIZE/128 ; i ; dst += 128, --i)	{
 #endif
-							IAPAL =  dst&0xff;
-							IAPAH = (dst>>8)&0xff;
+							IAPA16 = dst;
 							IAPFD = 0xFF;						// this mode must be 0xFF (TODO: may we move it out of loop?)
 							IAPCN = 0x22;						// APROM page erase - see datasheet IAP modes and command codes
-							set_IAPGO;
+							iap_go();
 						}
 
-						clr_APUEN;
-						clr_IAPEN;
+						iap_off();
 						u16ApromAddr = 0x0000;				// reset Aprom Address
 						set_EA;								// enable interrupts
 						tx(CMD_ACK);
 						idx = 0;
+						break;
 					}
-					if(idx >= 2  && receivedBuf[1] != CMD_DEL) {	//FIXME: shoould it be just "else" ?
- 						tx(CMD_NACK);
-						idx = 0;
-					}
-					break;
+					//here fall down to default exception
 				}
-				case CMD_STX:
-					cmdmode = false;
-				break;
 				default:
 					tx(CMD_NACK);
 					idx = 0;
-				break;
+					break;
 			}
 		}
 		// data
@@ -207,19 +216,16 @@ void main()
 					const __idata uint8_t*	src = receivedBuf;
 					//Save data to APROM DATAFLASH
 					clr_EA;								// disable interrupts
-					set_IAPEN;
-					set_APUEN;
+					iap_on();
 					for(i = BLOCK_SIZE; i; --i) {
-						IAPAL = u16ApromAddr&0xff;			// low byte
-						IAPAH = (u16ApromAddr>>8)&0xff;		// high byte
-//						IAPFD = receivedBuf[i];				// byte to save
+						//IAPAL = u16ApromAddr&0xff;			// low byte
+						//IAPAH = (u16ApromAddr>>8)&0xff;		// high byte
 						IAPFD = *++src;						// byte to save
 						IAPCN = 0x21;						// APROM byte program - see datasheet IAP modes and command codes (TODO: may we move it out of loop?)
-						set_IAPGO;							// do it!
+						iap_go();							// do it!
 						u16ApromAddr++;						// next APROM byte addr
 					}
-					clr_APUEN;
-					clr_IAPEN;
+					iap_off();
 					set_EA;								// enable interrupts
 					tx(CMD_ACK);
 				}
