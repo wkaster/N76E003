@@ -6,18 +6,6 @@ replace {
     orl	%2,%3
 }
 
-replace restart {
-%1:
-	jbc	%3,%2
-	sjmp	%1
-%2:
-} by {
-	; peephole XXX untwist %3 bit-waits-0
-%1:
-	jb	%3,%1
-%2:
-} 
-
 replace {
 	lcall	%1
 } by {

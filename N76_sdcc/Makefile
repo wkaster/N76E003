@@ -54,7 +54,7 @@ XRAM_SIZE = --xram-size 768
 # N76 Clock Frequency (-DFOSC_160000, -DFOSC_166000)
 # USE_FLOATS (this should be combined with model large if set 1)
 # -DUSE_FLOATS=1
-DEFS = -DFOSC_160000
+DEFS = -DFOSC_160000 -DFOSC=16000000
 
 # ------------------------------------------------------
 # SDCC

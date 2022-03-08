@@ -1,4 +1,4 @@
-/**
+﻿/**
 *  N76E003 and MS51x Bootloader by Wiliam Kaster
 *  Visit https://github.com/wkaster/N76E003 for more info
 *
@@ -31,27 +31,19 @@ uint8_t timerCount;
 uint8_t buff[BLOCK_SIZE +3];
 
 uint16_t __at (0xA6) IAPA16 ;
+volatile uint16_t __at (0xC5) RLH3;
 
 inline void uart_init(uint32_t u32Baudrate) //use timer3 as Baudrate generator
 {
-	P06_Quasi_Mode;		//Setting UART pin as Quasi mode for transmit
-	P07_Quasi_Mode;		//Setting UART pin as Quasi mode for transmit
+	P06_PushPull_Mode;	//tx
+	P07_Input_Mode;		//rx
 
-	SCON = 0x50;     //UART0 Mode1,REN=1,TI=1
-	set_SMOD;        //UART0 Double Rate Enable
-	T3CON &= 0xF8;   //T3PS2=0,T3PS1=0,T3PS0=0(Prescale=1)
-	set_BRCK;        //UART0 baud rate clock source = Timer3
+	RLH3   = 65535 - FOSC/(16*u32Baudrate);
 
-#ifdef FOSC_160000
-	RH3    = HIBYTE(65536 - (1000000/u32Baudrate)-1);  		/*16 MHz */
-	RL3    = LOBYTE(65536 - (1000000/u32Baudrate)-1);		/*16 MHz */
-#endif
-#ifdef FOSC_166000
-	RH3    = HIBYTE(65536 - (1037500/u32Baudrate)); 		/*16.6 MHz */
-	RL3    = LOBYTE(65536 - (1037500/u32Baudrate)); 		/*16.6 MHz */
-#endif
-	set_TR3;         //Trigger Timer3
-	set_TI;			 //For printf function must setting TI = 1
+	SCON   = 0x52;     //UART0 Mode1,REN=1,TI=1
+	PCON  |= (1<<7);	//set_SMOD;        //PCON: UART0 Double Rate Enable
+	T3CON  = 0x20;	//T3PS2=0,T3PS1=0,T3PS0=0(Prescale=1), BRCK=1 (UART0 baud rate clock source = Timer3)
+	T3CON |= (1<<3);	//	TR3=1 - Enable Timer3
 }
 
 inline void tx_sync(){
@@ -65,7 +57,7 @@ static void tx(char c) {
 	idx = 0;
 }
 
-static void ta() {	//timed access protection
+inline void ta() {	//timed access protection
 	TA=0xAA;
 	TA=0x55;
 }
@@ -126,6 +118,7 @@ inline uint8_t dallas_crc8(const __idata uint8_t* data, uint8_t size)
 }
 
 #define u16ApromAddr IAPA16
+//uint16_t u16ApromAddr;
 
 void main()
 {
@@ -172,25 +165,25 @@ void main()
 				case CMD_SUB:
 				{
 					if(idx == 2 && buff[1] == CMD_DEL) {	// Erase APROM (128 bytes per page)
-						uint8_t i;
 						clr_EA;								// disable interrupts
 						iap_on();
-
 							IAPCN = 0x22;						// APROM page erase - see datasheet IAP modes and command codes
 							IAPFD = 0xFF;						// this mode must be 0xFF
-							IAPA16 = 0;
-							for(i = APROM_SIZE/256 ; i ; --i )	{
-								iap_go();	IAPAL = 0x80;
-								iap_go();	IAPAL = 0x00;
-							}
-
+							IAPAH = APROM_SIZE/256;
+							do {
+								IAPAH--;
+								IAPAL = 0x80;	iap_go();
+								IAPAL = 0x00;	iap_go();
+							} while (IAPAH);
 						iap_off();
 						u16ApromAddr = 0x0000;				// reset Aprom Address
 						set_EA;								// enable interrupts
 						tx(CMD_ACK);
-						break;
 					}
-					//here fall down to default exception
+					if(idx >= 2  && buff[1] != CMD_DEL) {	//KK: still this part not so clear for me...
+ 						tx(CMD_NACK);
+					}
+					break;
 				}
 				default:
 					tx(CMD_NACK);
@@ -211,7 +204,7 @@ void main()
 						for(i = BLOCK_SIZE; i; --i) {
 							IAPFD = *++src;						// byte to save
 							iap_go();							// do it!
-							u16ApromAddr++;						// next APROM byte addr
+							u16ApromAddr++;
 						}
 					iap_off();
 					set_EA;								// enable interrupts
