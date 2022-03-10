@@ -1,22 +1,23 @@
-/**
-*  N76E003 and MS51x Bootloader by Wiliam Kaster
+﻿/**
+*  N76E003 and MS51x Bootloader by Wiliam Kaster and Konstantin Kim
 *  Visit https://github.com/wkaster/N76E003 for more info
 *
 *  This bootloader is NOT COMPATIBLE with Nuvoton's ISP software
 *
 *  Version 1.0: 2022-02-04
 *       First working version
+*  Version 1.1: 2022-03-10
+*		Code performance and adjusts
+*		Footprint shrink
 */
 #include "N76E003.h"
 #include "SFR_Macro.h"
 #include "Function_define.h"
 #include "Common.h"
-#include "Delay.h"
 #include <stdbool.h>
-//#include <stdint.h>
 
 
-#define APROM_SIZE      16*1024 // 16Kb (APROM) + 2Kb (LDROM) = 18Kb TOTAL  (adjust for MS51x)
+#define APROM_SIZE      17*1024 // 17Kb (APROM) + 1Kb (LDROM) = 18Kb TOTAL  (adjust for MS51x)
 #define BLOCK_SIZE      16		// bytes in data block
 #define CMD_SOH			0x01    // [SOH] Start of Heading
 #define CMD_STX			0x02	// [STX] Start of Text
@@ -27,34 +28,76 @@
 #define CMD_SUB         0x1A    // [SUB] Substitute
 #define CMD_DEL         0x7F    // [DEL] Delete
 
+uint8_t idx;
+uint8_t timerCount;
+uint8_t buff[BLOCK_SIZE +3];
 
-uint8_t timerCount = 0;
-uint8_t receivedBuf[20];
-uint8_t idx = 0;
+uint16_t __at (0xA6) IAPA16 ;
+volatile uint16_t __at (0xC5) RLH3;
 
+inline void uart_init(uint32_t u32Baudrate) //use timer3 as Baudrate generator
+{
+	P06_PushPull_Mode;	//tx
+	P07_Input_Mode;		//rx
+
+	RLH3   = 65535 - FOSC/(16*u32Baudrate);
+
+	SCON   = 0x52;     //UART0 Mode1,REN=1,TI=1
+	PCON  |= (1<<7);	//set_SMOD;        //PCON: UART0 Double Rate Enable
+	T3CON  = 0x20;	//T3PS2=0,T3PS1=0,T3PS0=0(Prescale=1), BRCK=1 (UART0 baud rate clock source = Timer3)
+	T3CON |= (1<<3);	//	TR3=1 - Enable Timer3
+}
+
+inline void tx_sync(){
+	while(!TI);
+}
+
+static void tx(char c) {
+	tx_sync();
+	TI = 0;
+	SBUF = c;
+	idx = 0;
+}
+
+inline void ta() {	//timed access protection
+	TA=0xAA;
+	TA=0x55;
+}
+
+static void iap_on() {	//warning:  interrupts have to be disabled
+	ta();	CHPCON |= SET_BIT0;	//set_IAPEN; 		//enable IAP mode
+	ta();	IAPUEN |= SET_BIT0;	//set_APUEN;		//enable APROM update
+}
+
+static void iap_go() {
+	ta();	IAPTRG |= SET_BIT0;	//set_IAPGO;
+}
+
+static void iap_off() {
+	ta();	IAPUEN &=~ SET_BIT0;	//	clr_APUEN;
+	ta();	CHPCON &=~ SET_BIT0;	//	clr_IAPEN;
+}
 
 void timer0_isr(void) __interrupt 1
 {
 	TL0 = LOBYTE(TIMER_DIV12_VALUE_40ms);
 	TH0 = HIBYTE(TIMER_DIV12_VALUE_40ms);
-	if (!(++timerCount&0x0f))	
+	if (!(++timerCount&0x0f))
 	{
 		clr_TR0;  // stop timer
 		idx = 1;
-		receivedBuf[0] = CMD_EOT;	// reset from aprom
+		buff[0] = CMD_EOT;	// reset from aprom
 	}
 }
 
 void serial_isr() __interrupt 4
 {
-	if(RI == 1)
-	{
-		receivedBuf[idx] = SBUF;
-		idx++;
-		if(idx > 19) {
-			receivedBuf[0] = 0x00;
+	if (RI)	{
+		if (idx >= sizeof(buff)) {	//overflow
 			idx = 0;
 		}
+		buff[idx] = SBUF;
+		idx++;
 		RI = 0;              // Clear the Receive interrupt flag
 	}
 }
@@ -76,15 +119,18 @@ inline uint8_t dallas_crc8(const __idata uint8_t* data, uint8_t size)
 	return crc;
 }
 
+#define u16ApromAddr IAPA16
+//uint16_t u16ApromAddr;
 
 void main()
 {
-	uint8_t  crc8 = 0;
-	uint16_t u16ApromAddr = 0x0000;
+//	uint16_t u16ApromAddr = 0x0000;
+	u16ApromAddr = 0x0000;
 	bool cmdmode = true;
+	idx = 0;
+	timerCount = 0;
 
-	/* maximum speed 19200 without change clock frequency to 16.6MHz. */
-	InitialUART0_Timer3(19200);
+	uart_init(19200);	//	maximum speed 19200 without change clock frequency to 16.6MHz.
 
 	TMOD |= 0x01; // mode 1
 
@@ -97,103 +143,78 @@ void main()
 
 	set_TR0; 	// run timer
 
-	while(1)
-	{
+	for(;;)	{
 		// commands
 		if(idx > 0 && cmdmode) {
-			switch(receivedBuf[0])
+			switch(buff[0])
 			{
 				case CMD_SOH:
-					Send_Data_To_UART0(CMD_ACK);
+					tx(CMD_ACK);
 					clr_TR0;						// stop timer
-					idx = 0;
 					cmdmode = true;
-				break;
+					break;
 				case CMD_EOT:
-					Send_Data_To_UART0(CMD_ACK);
+					tx(CMD_ACK);
+					tx_sync();
 					clr_SWRF;						// clear software reset flag
 					clr_EA;							// disable interrupts
-					TA=0xAA;
-					TA=0x55;
-					CHPCON&=~SET_BIT1;				// boot from APROM
-					TA=0xAA;
-					TA=0x55;
-					CHPCON|=SET_BIT7;				//  reset
-				break;
+					ta();	CHPCON&=~SET_BIT1;		// clr_BS		boot from APROM
+					ta();	CHPCON|= SET_BIT7;		// set_SWRST	reset
+					break;
+				case CMD_STX:
+					cmdmode = false;
+					break;
 				case CMD_SUB:
 				{
-					if(idx == 2 && receivedBuf[1] == CMD_DEL) {
-						// Erase APROM (128 bytes per page)
+					if(idx == 2 && buff[1] == CMD_DEL) {	// Erase APROM (128 bytes per page)
 						clr_EA;								// disable interrupts
-						set_IAPEN; 							//enable IAP mode
-						set_APUEN;							//enable APROM update
-
-						uint16_t dst;
-#if APROM_SIZE>32767
-						for(dst=0 ; dst < APROM_SIZE ; dst += 128) {
-#else
-						uint8_t i;
-						dst = 0x0000;
-						for(i = APROM_SIZE/128 ; i ; dst += 128, --i)	{
-#endif
-							IAPAL =  dst&0xff;
-							IAPAH = (dst>>8)&0xff;
-							IAPFD = 0xFF;						// this mode must be 0xFF (TODO: may we move it out of loop?)
+						iap_on();
 							IAPCN = 0x22;						// APROM page erase - see datasheet IAP modes and command codes
-							set_IAPGO;
-						}
-
-						clr_APUEN;
-						clr_IAPEN;
+							IAPFD = 0xFF;						// this mode must be 0xFF
+							IAPAH = APROM_SIZE/256;
+							do {
+								IAPAH--;
+								IAPAL = 0x80;	iap_go();
+								IAPAL = 0x00;	iap_go();
+							} while (IAPAH);
+						iap_off();
 						u16ApromAddr = 0x0000;				// reset Aprom Address
 						set_EA;								// enable interrupts
-						Send_Data_To_UART0(CMD_ACK);
-						idx = 0;
+						tx(CMD_ACK);
 					}
-					if(idx >= 2  && receivedBuf[1] != CMD_DEL) {
- 						Send_Data_To_UART0(CMD_NACK);
-						idx = 0;
+					if(idx >= 2  && buff[1] != CMD_DEL) {	//KK: still this part not so clear for me...
+ 						tx(CMD_NACK);
 					}
 					break;
 				}
-				case CMD_STX:
-					cmdmode = false;
-				break;
 				default:
-					Send_Data_To_UART0(CMD_NACK);
-					idx = 0;
-				break;
+					tx(CMD_NACK);
+					break;
 			}
 		}
 		// data
-		if(idx > 17 && !cmdmode) {
-			if(receivedBuf[18] == CMD_ETX) {
-				crc8 = dallas_crc8(&receivedBuf[1], BLOCK_SIZE);
-				if(crc8 == receivedBuf[BLOCK_SIZE + 1]) {
+		if( (idx >= BLOCK_SIZE+2) && !cmdmode) {
+			if(buff[BLOCK_SIZE +2] == CMD_ETX) {
+				uint8_t crc = dallas_crc8(&buff[1], BLOCK_SIZE);
+				if(buff[BLOCK_SIZE + 1] == crc) {
 					uint8_t i;
-					const __idata uint8_t*	src = receivedBuf;
+					const __idata uint8_t*	src = buff;
 					//Save data to APROM DATAFLASH
 					clr_EA;								// disable interrupts
-					set_IAPEN;
-					set_APUEN;
-					for(i = BLOCK_SIZE; i; --i) {
-						IAPAL = u16ApromAddr&0xff;			// low byte
-						IAPAH = (u16ApromAddr>>8)&0xff;		// high byte
-//						IAPFD = receivedBuf[i];				// byte to save
-						IAPFD = *++src;						// byte to save
-						IAPCN = 0x21;						// APROM byte program - see datasheet IAP modes and command codes (TODO: may we move it out of loop?)
-						set_IAPGO;							// do it!
-						u16ApromAddr++;						// next APROM byte addr
-					}
-					clr_APUEN;
-					clr_IAPEN;
+					iap_on();
+						IAPCN = 0x21;						// APROM byte program - see datasheet IAP modes and command codes
+						for(i = BLOCK_SIZE; i; --i) {
+							IAPFD = *++src;						// byte to save
+							iap_go();							// do it!
+							u16ApromAddr++;
+						}
+					iap_off();
 					set_EA;								// enable interrupts
-					Send_Data_To_UART0(CMD_ACK);
+					tx(CMD_ACK);
 				}
 				else {
-					Send_Data_To_UART0(CMD_NACK);
+					tx(CMD_NACK);
 				}
-				idx = 0;
 				cmdmode = true;
 			}
 		}
