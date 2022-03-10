@@ -59,12 +59,14 @@ static void tx(char c) {
 	idx = 0;
 }
 
+#pragma callee_saves ta,iap_on,iap_go,iap_off
+
 inline void ta() {	//timed access protection
 	TA=0xAA;
-	TA=0x55;
+	TA=0x55;	//from now access write granted for 4 clock cycles
 }
 
-static void iap_on() {	//warning:  interrupts have to be disabled
+inline void iap_on() {	//warning:  interrupts have to be disabled
 	ta();	CHPCON |= SET_BIT0;	//set_IAPEN; 		//enable IAP mode
 	ta();	IAPUEN |= SET_BIT0;	//set_APUEN;		//enable APROM update
 }
@@ -73,7 +75,7 @@ static void iap_go() {
 	ta();	IAPTRG |= SET_BIT0;	//set_IAPGO;
 }
 
-static void iap_off() {
+inline void iap_off() {
 	ta();	IAPUEN &=~ SET_BIT0;	//	clr_APUEN;
 	ta();	CHPCON &=~ SET_BIT0;	//	clr_IAPEN;
 }
@@ -109,23 +111,29 @@ inline uint8_t dallas_crc8(const __idata uint8_t* data, uint8_t size)
 	do {
 		uint8_t inbyte = *data++;
 		uint8_t j=8;
+
+		crc ^= inbyte;
 		do {
-			uint8_t mix = (crc ^ inbyte) & 0x01;
-			crc >>= 1;
-			if ( mix ) crc ^= 0x8C;
-			inbyte >>= 1;
+//			crc = (crc>>1) ^ (( crc & 1 ) ? 0x8C : 0x00);	nice oneliner which is too hard for SDCC ;)
+			uint8_t y = crc>>1;
+			uint8_t x = 0;
+			if ( crc & 1 )	x = 0x8C;
+			crc = y ^ x;
 		} while (--j);
+
+		//do {
+		//	uint8_t mix = (crc ^ inbyte) & 0x01;
+		//	crc >>= 1;
+		//	if ( mix ) crc ^= 0x8C;
+		//	inbyte >>= 1;
+		//} while (--j);
 	} while (--size);
 	return crc;
 }
 
-#define u16ApromAddr IAPA16
-//uint16_t u16ApromAddr;
-
 void main()
 {
-//	uint16_t u16ApromAddr = 0x0000;
-	u16ApromAddr = 0x0000;
+	IAPA16 = 0x0000;
 	bool cmdmode = true;
 	idx = 0;
 	timerCount = 0;
@@ -136,6 +144,8 @@ void main()
 
 	TL0 = TIMER_DIV12_VALUE_40ms&&0xff;
 	TH0 = (TIMER_DIV12_VALUE_40ms>>8)&0xff;
+
+	iap_on();
 
 	set_ET0; 	// enable timer0 interrupt
 	set_ES; 	// enable serial interrupt
@@ -158,6 +168,7 @@ void main()
 					tx_sync();
 					clr_SWRF;						// clear software reset flag
 					clr_EA;							// disable interrupts
+					//iap_off();					//TODO: is it useful
 					ta();	CHPCON&=~SET_BIT1;		// clr_BS		boot from APROM
 					ta();	CHPCON|= SET_BIT7;		// set_SWRST	reset
 					break;
@@ -168,17 +179,17 @@ void main()
 				{
 					if(idx == 2 && buff[1] == CMD_DEL) {	// Erase APROM (128 bytes per page)
 						clr_EA;								// disable interrupts
-						iap_on();
-							IAPCN = 0x22;						// APROM page erase - see datasheet IAP modes and command codes
-							IAPFD = 0xFF;						// this mode must be 0xFF
-							IAPAH = APROM_SIZE/256;
-							do {
-								IAPAH--;
-								IAPAL = 0x80;	iap_go();
-								IAPAL = 0x00;	iap_go();
-							} while (IAPAH);
-						iap_off();
-						u16ApromAddr = 0x0000;				// reset Aprom Address
+//						iap_on();
+						IAPCN = 0x22;						// APROM page erase - see datasheet IAP modes and command codes
+						IAPFD = 0xFF;						// this mode must be 0xFF
+						IAPAH = APROM_SIZE/256;
+						do {
+							IAPAH--;
+							IAPAL = 0x80;	iap_go();
+							IAPAL = 0x00;	iap_go();
+						} while (IAPAH);
+//						iap_off();
+						IAPA16 = 0x0000;				// reset Aprom Address
 						set_EA;								// enable interrupts
 						tx(CMD_ACK);
 					}
@@ -201,14 +212,14 @@ void main()
 					const __idata uint8_t*	src = buff;
 					//Save data to APROM DATAFLASH
 					clr_EA;								// disable interrupts
-					iap_on();
-						IAPCN = 0x21;						// APROM byte program - see datasheet IAP modes and command codes
-						for(i = BLOCK_SIZE; i; --i) {
-							IAPFD = *++src;						// byte to save
-							iap_go();							// do it!
-							u16ApromAddr++;
-						}
-					iap_off();
+//					iap_on();
+					IAPCN = 0x21;						// APROM byte program - see datasheet IAP modes and command codes
+					for(i = BLOCK_SIZE; i; --i) {
+						IAPFD = *++src;						// byte to save
+						iap_go();							// do it!
+						IAPA16++;
+					}
+//					iap_off();
 					set_EA;								// enable interrupts
 					tx(CMD_ACK);
 				}

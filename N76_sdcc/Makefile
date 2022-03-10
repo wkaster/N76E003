@@ -24,7 +24,7 @@ C_TO_ASM_FILE = $(C_SRC_FILE:%.c=%.asm)
 ASM_SRC_FILE = $(notdir $(ASM_SRC))
 ASM_OBJ_FILE = $(ASM_SRC_FILE:%.asm=%.asm.rel)
 
-OBJ = $(addprefix $(OBJDIR)/, $(C_OBJ_FILE)) $(addprefix $(OBJDIR)/, $(ASM_OBJ_FILE)) 
+OBJ = $(addprefix $(OBJDIR)/, $(C_OBJ_FILE)) $(addprefix $(OBJDIR)/, $(ASM_OBJ_FILE))
 CTOASM = $(addprefix $(OUTDIR)/, $(C_TO_ASM_FILE))
 
 #$(info $(CTOASM))
@@ -63,12 +63,13 @@ AS = sdas8051
 
 MCU_MODEL = mcs51
 
-#LIBS    = 
+#LIBS    =
 #LIBPATH = -L $(LIBDIR)
 
 #DEBUG = --debug
-AFLAGS =  -l -s 
+AFLAGS =  -l -s
 CFLAGS = -I$(INCDIR) -m$(MCU_MODEL) --model-$(MODEL) --out-fmt-ihx --no-xinit-opt $(DEBUG) $(DEFS) --peep-file tools/peep.def
+CFLAGS+= --opt-code-size --fomit-frame-pointer --peep-asm --peep-return --std-c11 --acall-ajmp
 LFLAGS = $(LIBPATH) $(LIBS) -m$(MCU_MODEL) --model-$(MODEL) $(CODE_SIZE) $(IRAM_SIZE) $(XRAM_SIZE) --out-fmt-ihx $(DEBUG) $(DEFS)
 
 # ------------------------------------------------------
@@ -94,7 +95,7 @@ $(OBJDIR)/%.c.rel: $(SRCDIR)/%.c
 	$(CC) -o $@ $(CFLAGS) -c $^
 
 $(OBJDIR)/%.asm.rel: $(SRCDIR)/%.asm
-	$(AS) $(AFLAGS) -o $@ $^ 
+	$(AS) $(AFLAGS) -o $@ $^
 
 .PHONY: clean
 
@@ -112,4 +113,3 @@ $(OUTDIR)/%.asm: $(LIBDIR)/%.c
 
 $(OUTDIR)/%.asm: $(SRCDIR)/%.c
 	$(CC) -o $@ -S $(CFLAGS) -c $^
-
