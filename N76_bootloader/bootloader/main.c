@@ -7,8 +7,8 @@
 *  Version 1.0: 2022-02-04
 *       First working version
 *  Version 1.1: 2022-03-10
-*		Code performance and adjusts
-*		Footprint shrink
+*       Code performance and adjusts
+*       Footprint shrink
 */
 #include "N76E003.h"
 #include "SFR_Macro.h"
