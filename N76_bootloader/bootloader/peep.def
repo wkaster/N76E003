@@ -1,0 +1,29 @@
+replace { 
+	mov	%1,%2
+	orl	a%1,%3
+	mov	%2,%1
+} by { 
+    orl	%2,%3
+}
+
+replace {
+	lcall	%1
+} by {
+	;	lcall->acall
+	acall	%1
+}
+
+replace {
+	ljmp	%1
+} by {
+	;	ljmp->ajmp
+	ajmp	%1
+}
+
+replace {
+	sjmp	%1
+} by {
+	;	sjmp->ajmp
+	ajmp	%1
+}
+
