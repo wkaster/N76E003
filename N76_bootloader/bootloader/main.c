@@ -1,21 +1,23 @@
 ﻿/**
-*  N76E003 and MS51x Bootloader by Wiliam Kaster
+*  N76E003 and MS51x Bootloader by Wiliam Kaster and Konstantin Kim
 *  Visit https://github.com/wkaster/N76E003 for more info
 *
 *  This bootloader is NOT COMPATIBLE with Nuvoton's ISP software
 *
 *  Version 1.0: 2022-02-04
 *       First working version
+*  Version 1.1: 2022-03-10
+*		Code performance and adjusts
+*		Footprint shrink
 */
 #include "N76E003.h"
 #include "SFR_Macro.h"
 #include "Function_define.h"
 #include "Common.h"
-#include "Delay.h"
 #include <stdbool.h>
-//#include <stdint.h>
 
-#define APROM_SIZE      16*1024 // 16Kb (APROM) + 2Kb (LDROM) = 18Kb TOTAL  (adjust for MS51x)
+
+#define APROM_SIZE      17*1024 // 17Kb (APROM) + 1Kb (LDROM) = 18Kb TOTAL  (adjust for MS51x)
 #define BLOCK_SIZE      16		// bytes in data block
 #define CMD_SOH			0x01    // [SOH] Start of Heading
 #define CMD_STX			0x02	// [STX] Start of Text

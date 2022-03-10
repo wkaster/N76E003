@@ -14,8 +14,7 @@ LIBDIR  = ./lib
 # Target and Source
 TARGET = $(OUTDIR)/main
 
-#C_SRC := $(wildcard $(SRCDIR)/*.c $(LIBDIR)/*.c)
-C_SRC := $(wildcard $(SRCDIR)/*.c)	# bootloader way
+C_SRC := $(wildcard $(SRCDIR)/*.c $(LIBDIR)/*.c)
 ASM_SRC = $(wildcard $(SRCDIR)/*.asm)
 
 C_SRC_FILE = $(notdir $(C_SRC))
@@ -54,7 +53,7 @@ XRAM_SIZE = --xram-size 768
 # N76 Clock Frequency (-DFOSC_160000, -DFOSC_166000)
 # USE_FLOATS (this should be combined with model large if set 1)
 # -DUSE_FLOATS=1
-DEFS = -DFOSC_160000 -DFOSC=16000000
+DEFS = -DFOSC_160000
 
 # ------------------------------------------------------
 # SDCC
