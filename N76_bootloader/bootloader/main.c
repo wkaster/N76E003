@@ -28,6 +28,8 @@
 #define CMD_SUB         0x1A    // [SUB] Substitute
 #define CMD_DEL         0x7F    // [DEL] Delete
 
+#define	__builtin_unreachable() for(;;)
+
 uint8_t idx;
 uint8_t timerCount;
 uint8_t buff[BLOCK_SIZE +3];
@@ -67,15 +69,19 @@ inline void ta() {	//timed access protection
 }
 
 inline void iap_on() {	//warning:  interrupts have to be disabled
-	ta();	CHPCON |= SET_BIT0;	//set_IAPEN; 		//enable IAP mode
-	ta();	IAPUEN |= SET_BIT0;	//set_APUEN;		//enable APROM update
+//	ta();	CHPCON |= SET_BIT0;	//set_IAPEN; 		//enable IAP mode
+//	ta();	IAPUEN |= SET_BIT0;	//set_APUEN;		//enable APROM update
+	ta();	CHPCON = 1;	//set_IAPEN; 		//enable IAP mode + clr_BS	boot from APROM
+	ta();	IAPUEN = 1;	//set_APUEN;		//enable APROM update
 }
 
 static void iap_go() {
-	ta();	IAPTRG |= SET_BIT0;	//set_IAPGO;
+//	ta();	IAPTRG |= SET_BIT0;	//set_IAPGO;
+	ta();	IAPTRG = 1;	//set_IAPGO;
 }
 
 inline void iap_off() {
+//	ta();	IAPUEN = 0;	//	clr_APUEN;
 	ta();	IAPUEN &=~ SET_BIT0;	//	clr_APUEN;
 	ta();	CHPCON &=~ SET_BIT0;	//	clr_IAPEN;
 }
@@ -168,16 +174,16 @@ void main()
 					tx_sync();
 					clr_SWRF;						// clear software reset flag
 					clr_EA;							// disable interrupts
-					//iap_off();					//TODO: is it useful
-					ta();	CHPCON&=~SET_BIT1;		// clr_BS		boot from APROM
-					ta();	CHPCON|= SET_BIT7;		// set_SWRST	reset
-					break;
+					ta();	CHPCON= 0x80;			// set_SWRST	reset + IAP off
+					__builtin_unreachable();
+//					break;
 				case CMD_STX:
 					cmdmode = false;
 					break;
 				case CMD_SUB:
 				{
-					if(idx == 2 && buff[1] == CMD_DEL) {	// Erase APROM (128 bytes per page)
+					if (idx < 2) break;
+					else if (buff[1] == CMD_DEL) {	// Erase APROM (128 bytes per page)
 						clr_EA;								// disable interrupts
 //						iap_on();
 						IAPCN = 0x22;						// APROM page erase - see datasheet IAP modes and command codes
@@ -192,11 +198,9 @@ void main()
 						IAPA16 = 0x0000;				// reset Aprom Address
 						set_EA;								// enable interrupts
 						tx(CMD_ACK);
+						break;
 					}
-					if(idx >= 2  && buff[1] != CMD_DEL) {	//KK: still this part not so clear for me...
- 						tx(CMD_NACK);
-					}
-					break;
+					//fall down to NACK
 				}
 				default:
 					tx(CMD_NACK);
