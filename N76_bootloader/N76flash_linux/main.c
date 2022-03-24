@@ -197,7 +197,7 @@ int main(int argc, char** argv)
     tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
 
 
-    tty.c_cc[VTIME] = 20;    // Wait for up to 1s (20 deciseconds), returning as soon as any data is received.
+    tty.c_cc[VTIME] = 2;    // Wait for up to 200ms (2 deciseconds), returning as soon as any data is received.
     tty.c_cc[VMIN] = 0;
 
     // Set in/out baud rate to be 19200
@@ -248,7 +248,7 @@ int main(int argc, char** argv)
 
     if(nReturnCode==1) goto error;  // gave up connecting
 
-    tty.c_cc[VTIME] = 0;    // Wait for up to 1s (200 deciseconds), returning as soon as any data is received.
+    tty.c_cc[VTIME] = 0;
     tty.c_cc[VMIN] = 1;
 
 
