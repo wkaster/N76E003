@@ -15,4 +15,3 @@ Press the "Setting" button and modify the boot option and LDROM size accordingly
 
 This is the command line used to program the chip from now own, the only mandatory option is the file that should be in **binary** format. \
 When the flash programming is initiated is required to reset the microcontroller when asked, in order to access the bootloader process. \
-**Note:** If your Aprom program is using the same serial interface you may face some errors in the first attempts, might be necessary reset more than once or restart the process.
