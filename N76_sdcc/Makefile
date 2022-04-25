@@ -69,7 +69,6 @@ MCU_MODEL = mcs51
 #DEBUG = --debug
 AFLAGS =  -l -s
 CFLAGS = -I$(INCDIR) -m$(MCU_MODEL) --model-$(MODEL) --out-fmt-ihx --no-xinit-opt $(DEBUG) $(DEFS) --peep-file tools/peep.def
-CFLAGS+= --opt-code-size --fomit-frame-pointer --peep-asm --peep-return --std-c11 --acall-ajmp
 LFLAGS = $(LIBPATH) $(LIBS) -m$(MCU_MODEL) --model-$(MODEL) $(CODE_SIZE) $(IRAM_SIZE) $(XRAM_SIZE) --out-fmt-ihx $(DEBUG) $(DEFS)
 
 # ------------------------------------------------------
